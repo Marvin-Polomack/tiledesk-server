@@ -352,7 +352,7 @@ if (process.env.DISABLE_SESSION_STRATEGY==true ||  process.env.DISABLE_SESSION_S
           url: redisConnectionUrl,
           socket: {
             // Railway private host resolves only to AAAA → force IPv6
-            family: process.env.CACHE_REDIS_HOST === "redis.railway.internal" ? 6 : 4
+            family: process.env.CACHE_REDIS_HOST === "redis.railway.internal" ? 0 : 4
           }
         });
 
