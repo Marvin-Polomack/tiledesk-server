@@ -1,4 +1,4 @@
-const redis = require('redis');
+const Redis = require('ioredis');
 
 class TdCache {
 
@@ -10,24 +10,27 @@ class TdCache {
     }
 
     async connect(callback) {
-        // client = redis.createClient();
         return new Promise( async (resolve, reject) => {
-            this.client = redis.createClient(
-                {
-                    host: this.redis_host,
-                    port: this.redis_port,
-                    password: this.redis_password
-                });
+            // ioredis configuration object
+            const redisConfig = {
+                host: this.redis_host,
+                port: this.redis_port,
+                password: this.redis_password,
+                retryDelayOnFailover: 100,
+                enableReadyCheck: false,
+                maxRetriesPerRequest: null,
+            };
+
+            this.client = new Redis(redisConfig);
+            
             this.client.on('error', err => {
                 reject(err);
                 if (callback) {
                     callback(err);
                 }
             });
-            // this.client.on('connect', function() {
-            //     console.log('Redis Connected!');
-            // });
-            this.client.on('ready',function() {
+            
+            this.client.on('ready', function() {
                 resolve();
                 if (callback) {
                     callback();
@@ -42,149 +45,98 @@ class TdCache {
       if (!options) {
         options = {EX: 86400}
       }
-      return new Promise( async (resolve, reject) => {
+      try {
         if (options && options.EX) {
           //console.log("expires:", options.EX)
-          try {
-            await this.client.set(
-              key,
-              value,
-              'EX', options.EX);
-          }
-          catch(error) {
-            reject(error)
-          }
+          await this.client.set(key, value, 'EX', options.EX);
         }
         else {
-          try {
-            //console.log("setting here...key", key, value)
-            await this.client.set(
-              key,
-              value);
-          }
-          catch(error) {
-            console.error("Error", error);
-            reject(error)
-          }
+          //console.log("setting here...key", key, value)
+          await this.client.set(key, value);
         }
         if (options && options.callback) {
             options.callback();
         }
         //console.log("resolving...", key);
-        return resolve();
-      });
+        return;
+      } catch(error) {
+        console.error("Error", error);
+        throw error;
+      }
     }
 
     async incr(key) {
       // console.log("incr key:", key)
-      return new Promise( async (resolve, reject) => {
-        try {
-            // console.log("incr here...key", key)
-            await this.client.incr(key);
-          }
-          catch(error) {
-            console.error("Error on incr:", error);
-            reject(error)
-          }
-        return resolve();
-      });
+      try {
+        // console.log("incr here...key", key)
+        await this.client.incr(key);
+        return;
+      } catch(error) {
+        console.error("Error on incr:", error);
+        throw error;
+      }
     }
 
     async incrby(key, increment) {
-      return new Promise( async (resolve, reject) => {
-        try {
-          await this.client.incrby(key, increment);
-        }
-        catch(error) {
-          console.error("Error on incrby:", error);
-          reject(error)
-        }
-        return resolve()
-      })
+      try {
+        await this.client.incrby(key, increment);
+        return;
+      } catch(error) {
+        console.error("Error on incrby:", error);
+        throw error;
+      }
     }
 
     async incrbyfloat(key, increment) {
-      return new Promise( async (resolve, reject) => {
-        try {
-          await this.client.incrbyfloat(key, increment);
-        }
-
-        catch(error) {
-          console.error("Error on incrby: ", error);
-          reject(error);
-        }
-        return resolve();
-      })
+      try {
+        await this.client.incrbyfloat(key, increment);
+        return;
+      } catch(error) {
+        console.error("Error on incrby: ", error);
+        throw error;
+      }
     }
 
     async hset(dict_key, key, value, options) {
       //console.log("hsetting dict_key key value", dict_key, key, value)
-      return new Promise( async (resolve, reject) => {
+      try {
         if (options && options.EX) {
           //console.log("expires:", options.EX)
-          try {
-            await this.client.hset(
-              dict_key,
-              key,
-              value,
-              'EX', options.EX);
-          }
-          catch(error) {
-            reject(error)
-          }
+          await this.client.hset(dict_key, key, value, 'EX', options.EX);
         }
         else {
-          try {
-            //console.log("setting here...key", key, value)
-            await this.client.hset(
-              dict_key,
-              key,
-              value);
-          }
-          catch(error) {
-            console.error("Error", error);
-            reject(error)
-          }
+          //console.log("setting here...key", key, value)
+          await this.client.hset(dict_key, key, value);
         }
         if (options && options.callback) {
             options.callback();
         }
-        return resolve();
-      });
+        return;
+      } catch(error) {
+        console.error("Error", error);
+        throw error;
+      }
     }
 
     async hdel(dict_key, key, options) {
       //console.log("hsetting dict_key key value", dict_key, key, value)
-      return new Promise( async (resolve, reject) => {
+      try {
         if (options && options.EX) {
           //console.log("expires:", options.EX)
-          try {
-            await this.client.hdel(
-              dict_key,
-              key,
-              'EX', options.EX);
-          }
-          catch(error) {
-            reject(error)
-          }
+          await this.client.hdel(dict_key, key, 'EX', options.EX);
         }
         else {
-          try {
-            //console.log("setting here...key", key, value)
-            await this.client.hdel(
-              dict_key,
-              key);
-          }
-          catch(error) {
-            console.error("Error", error);
-            reject(error);
-          }
+          //console.log("setting here...key", key, value)
+          await this.client.hdel(dict_key, key);
         }
         if (options && options.callback) {
             options.callback();
         }
-        return resolve();
-      });
+        return;
+      } catch(error) {
+        console.error("Error", error);
+        throw error;
+      }
     }
     
     async setJSON(key, value, options) {
@@ -193,59 +145,50 @@ class TdCache {
     }
     
     async get(key, callback) {
-      return new Promise( async (resolve, reject) => {
-        this.client.get(key, (err, value) => {
-          if (err) {
-            reject(err);
-          }
-          else {
-            if (callback) {
-              callback(value);
-          }
-          return resolve(value);
-          }
-        });
-      });
+      try {
+        const value = await this.client.get(key);
+        if (callback) {
+          callback(value);
+        }
+        return value;
+      } catch(err) {
+        if (callback) {
+          callback(null);
+        }
+        throw err;
+      }
     }
 
     async hgetall(dict_key, callback) {
       //console.log("hgetting dics", dict_key);
-      return new Promise( async (resolve, reject) => {
-        this.client.hgetall(dict_key, (err, value) => {
-          if (err) {
-            reject(err);
-            if (callback) {
-              callback(err, null);
-            }
-          }
-          else {
-            if (callback) {
-              callback(null, value);
-            }
-            resolve(value);
-          }
-        });
-      });
+      try {
+        const value = await this.client.hgetall(dict_key);
+        if (callback) {
+          callback(null, value);
+        }
+        return value;
+      } catch(err) {
+        if (callback) {
+          callback(err, null);
+        }
+        throw err;
+      }
     }
 
     async hget(dict_key, key, callback) {
       //console.log("hgetting dics", dict_key);
-      return new Promise( async (resolve, reject) => {
-        this.client.hget(dict_key, key, (err, value) => {
-          if (err) {
-            reject(err);
-            if (callback) {
-              callback(err, null);
-            }
-          }
-          else {
-            if (callback) {
-              callback(null, value);
-            }
-            resolve(value);
-          }
-        });
-      });
+      try {
+        const value = await this.client.hget(dict_key, key);
+        if (callback) {
+          callback(null, value);
+        }
+        return value;
+      } catch(err) {
+        if (callback) {
+          callback(err, null);
+        }
+        throw err;
+      }
     }
     
     async getJSON(key, callback) {
@@ -254,13 +197,15 @@ class TdCache {
     }
     
     async del(key, callback) {
-      return new Promise( async (resolve, reject) => {
+      try {
         let result = await this.client.del(key);
         if (callback) {
             callback(result);
         }
-        return resolve(result);
-      })
+        return result;
+      } catch(error) {
+        throw error;
+      }
     }
 }
 
