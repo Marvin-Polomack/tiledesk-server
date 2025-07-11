@@ -16,6 +16,7 @@ class TdCache {
                 host: this.redis_host,
                 port: this.redis_port,
                 password: this.redis_password,
+                family: 6,
                 retryDelayOnFailover: 100,
                 enableReadyCheck: false,
                 maxRetriesPerRequest: null,
