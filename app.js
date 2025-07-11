@@ -326,17 +326,52 @@ if (process.env.DISABLE_SESSION_STRATEGY==true ||  process.env.DISABLE_SESSION_S
       // let redisClient = createClient()
       // redisClient.connect().catch(console.error)
 
-      let cacheClient = undefined;
-      if (pubModulesManager.cache) {
-        cacheClient = pubModulesManager.cache._cache._cache;  //_cache._cache to jump directly to redis modules without cacheoose wrapper (don't support await)
+      /**
+       * ------------------------------------------------------------------
+       * Redis client for express‑session
+       * ------------------------------------------------------------------
+       * 1. If SESSION_REDIS_USE_TDCACHE=true **and** TdCache is available,
+       *    reuse the existing ioredis client created earlier.
+       * 2. Otherwise build a dedicated node‑redis v4 client.
+       *    ‑ Uses the URL formed from CACHE_REDIS_* env vars.
+       *    ‑ When the private Railway hostname is used it forces IPv6
+       *      resolution via `socket.family = 6` to avoid ENOTFOUND.
+       * ------------------------------------------------------------------
+       */
+      let cacheClient;
+
+      if (process.env.SESSION_REDIS_USE_TDCACHE === "true" && pubModulesManager.cache) {
+        cacheClient = pubModulesManager.cache._cache._cache; // reuse TdCache client
+        winston.info("Session store: reusing TdCache Redis client");
+      } else {
+        const redisConnectionUrl =
+          `redis://:${process.env.CACHE_REDIS_PASSWORD}@` +
+          `${process.env.CACHE_REDIS_HOST}:${process.env.CACHE_REDIS_PORT}`;
+
+        cacheClient = createClient({
+          url: redisConnectionUrl,
+          socket: {
+            // Railway private host resolves only to AAAA → force IPv6
+            family: process.env.CACHE_REDIS_HOST === "redis.railway.internal" ? 6 : 4
+          }
+        });
+
+        cacheClient
+          .connect()
+          .then(() =>
+            winston.info(
+              `Session store: connected to Redis at ${process.env.CACHE_REDIS_HOST}:${process.env.CACHE_REDIS_PORT}`
+            )
+          )
+          .catch((err) =>
+            winston.error("Session store: Redis connection error", err)
+          );
       }
-      // winston.info("Express Session cacheClient",cacheClient);
 
-
-      let redisStore = new RedisStore({
+      const redisStore = new RedisStore({
         client: cacheClient,
-        prefix: "sessions:",
-      })
+        prefix: "sessions:"
+      });
 
 
       app.use(
