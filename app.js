@@ -155,6 +155,7 @@ var RouterLogger = require('./models/routerLogger');
 var cacheEnabler = require("./services/cacheEnabler");
 const session = require('express-session');
 const RedisStore = require("connect-redis").default
+const { createClient } = require('redis');
 const botEvent = require('./event/botEvent');
 
 require('./services/mongoose-cache-fn')(mongoose);

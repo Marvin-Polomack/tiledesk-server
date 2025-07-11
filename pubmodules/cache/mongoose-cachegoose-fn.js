@@ -908,7 +908,12 @@ module.exports = function (mongoose, option) {
         winston.info("Mongoose Cachegoose fn initialized, engine: " + engine + ", port: "+ port + ", host: "+ host  + " defaultTTL: " +cacheUtil.defaultTTL + ", password: "+ password);
         // winston.info("Mongoose Cachegoose fn initialized, engine: " + engine + ", endpoint: "+endPoint +", port: "+ port + ", host: "+ host + ", password: "+ password);
 
-
+        // Railway private host resolves only to AAAA → disable cachegoose to avoid IPv6 connection issues
+        if (host === "redis.railway.internal") {
+            winston.info("Railway internal Redis detected - disabling cachegoose to avoid IPv6 connection issues");
+            winston.info("Mongoose Cachegoose disabled for Railway");
+            return;
+        }
 
         
         // cachegoose(mongoose, endPoint);
