@@ -28,7 +28,26 @@ class Listener {
         var host = process.env.CACHE_REDIS_HOST || "127.0.0.1"
         winston.debug("Redis host: "+ host);
 
-        var password = process.env.CACHE_REDIS_PASSWORD;
+        // Railway private host resolves only to AAAA → try public URL or use alternative approach
+        if (host === "redis.railway.internal") {
+            winston.info("Railway internal Redis detected - trying alternative Redis configuration for voice connector");
+            
+            // Try using Railway's public Redis URL if available
+            if (process.env.REDIS_URL) {
+                winston.info("Using REDIS_URL for voice connector");
+                // Parse Redis URL to extract components
+                const redisUrl = new URL(process.env.REDIS_URL);
+                host = redisUrl.hostname;
+                port = redisUrl.port || 6379;
+                var password = redisUrl.password || process.env.CACHE_REDIS_PASSWORD;
+                winston.info(`Voice connector using parsed Redis URL: ${host}:${port}`);
+            } else {
+                winston.info("No REDIS_URL available - disabling voice connector to avoid IPv6 connection issues");
+                return;
+            }
+        } else {
+            var password = process.env.CACHE_REDIS_PASSWORD;
+        }
         winston.debug("Redis password: "+ password);
 
         let brand_name = null;

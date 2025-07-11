@@ -89,7 +89,15 @@ let tdCache = new TdCache({
     password: process.env.CACHE_REDIS_PASSWORD
 });
 
-tdCache.connect();
+// Railway private host resolves only to AAAA → handle connection gracefully
+if (process.env.CACHE_REDIS_HOST === "redis.railway.internal") {
+    winston.info("Main app: Railway internal Redis detected - attempting connection with error handling");
+}
+
+tdCache.connect().catch(err => {
+    winston.error('Main app: TdCache connection failed:', err);
+    winston.info('Main app: Continuing without Redis cache functionality');
+});
 
 // ROUTES DECLARATION
 var troubleshooting = require('./routes/troubleshooting');

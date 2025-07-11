@@ -31,7 +31,16 @@ let tdCache = new TdCache({
     port: process.env.CACHE_REDIS_PORT,
     password: process.env.CACHE_REDIS_PASSWORD
 });
-tdCache.connect();
+
+// Railway private host resolves only to AAAA → handle connection gracefully
+if (process.env.CACHE_REDIS_HOST === "redis.railway.internal") {
+    winston.info("RequestService: Railway internal Redis detected - attempting connection with error handling");
+}
+
+tdCache.connect().catch(err => {
+    winston.error('RequestService: TdCache connection failed:', err);
+    winston.info('RequestService: Continuing without Redis cache functionality');
+});
 let qm = new QuoteManager({ tdCache: tdCache });
 
 class RequestService {
