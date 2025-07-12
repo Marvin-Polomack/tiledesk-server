@@ -69,7 +69,6 @@ var UserSchema = new Schema({
     phone: {
         type: String,
         required: false,
-        unique: true,
         trim: true,
         match: [/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format'], // E.164 format
     }
