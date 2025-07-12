@@ -129,6 +129,10 @@ UserSchema.virtual('fullName').get(function () {
 
 
 //UserSchema.index({ email: 1, authType: 1 }, { unique: true }); 
+UserSchema.index(
+    { phone: 1 },
+    { unique: true, partialFilterExpression: { phone: { $type: 'string', $ne: null } } }
+  );
 
 var UserModel = mongoose.model('user', UserSchema);
 
